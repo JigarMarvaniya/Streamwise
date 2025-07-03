@@ -34,7 +34,7 @@ if page == "Data Visualization":
     st.pyplot(fig2)
 
     st.write("Download current data:")
-    st.download_button("Download Data as CSV", df.to_csv(index=False), file_name="streamwise_data.csv", mime="text/csv")
+    st.download_button("Download Data as CSV", df.to_csv(index=False), file_name="streamwise_survey_synthetic.csv", mime="text/csv")
 
 # --- More content for other tabs would go here (as in the detailed plan) ---
 st.sidebar.markdown("---")
