@@ -3,132 +3,114 @@ import pandas as pd
 import plotly.express as px
 import os
 
-# Set page config
+# Page setup
 st.set_page_config(page_title="StreamWise Dashboard", layout="wide")
 
-# Load logo and audio
+# Load branding
 def load_logo_audio():
-    try:
+    if os.path.exists("streamwise_logo.png"):
         st.image("streamwise_logo.png", width=150)
-    except Exception:
-        st.warning("Logo not found.")
-    try:
-        st.audio("streamwise_audio.mp3", format="audio/mp3", start_time=0)
-    except Exception:
-        st.warning("Intro audio file not found. Skipping audio...")
+    else:
+        st.warning("⚠️ Logo not found.")
+    
+    if os.path.exists("streamwise_audio.mp3"):
+        st.audio("streamwise_audio.mp3", format="audio/mp3")
+    else:
+        st.warning("🎧 Intro audio not found.")
 
 # Load dataset
 @st.cache_data
 def load_data():
     try:
         return pd.read_csv("streamwise_survey_synthetic.csv")
-    except FileNotFoundError:
-        st.error("Dataset not found! Please upload `streamwise_survey_synthetic.csv` using the sidebar.")
+    except Exception as e:
+        st.error(f"❌ Error loading data: {e}")
         return pd.DataFrame()
 
-# Sidebar controls
+# Filters
 def sidebar_filters(df):
-    st.sidebar.title("📁 Upload your StreamWise Survey CSV")
+    st.sidebar.title("📁 Upload Your Dataset")
     uploaded_file = st.sidebar.file_uploader("Upload CSV", type=["csv"])
     if uploaded_file:
         df = pd.read_csv(uploaded_file)
 
-    st.sidebar.header("🎛️ Filter Data")
-    gender = st.sidebar.multiselect("Gender", options=df["Gender"].dropna().unique(), default=df["Gender"].dropna().unique())
-    income = st.sidebar.multiselect("Income", options=df["Income"].dropna().unique(), default=df["Income"].dropna().unique())
-    location = st.sidebar.multiselect("Location", options=df["Location"].dropna().unique(), default=df["Location"].dropna().unique())
-    billing = st.sidebar.multiselect("BillingCycle", options=df["BillingCycle"].dropna().unique(), default=df["BillingCycle"].dropna().unique())
-    plan = st.sidebar.multiselect("PlanType", options=df["PlanType"].dropna().unique(), default=df["PlanType"].dropna().unique())
+    st.sidebar.header("🎛️ Filters")
+    gender = st.sidebar.multiselect("Gender", df["Gender"].unique(), default=df["Gender"].unique())
+    income = st.sidebar.multiselect("Income", df["Income"].unique(), default=df["Income"].unique())
+    location = st.sidebar.multiselect("Location", df["Location"].unique(), default=df["Location"].unique())
+    billing = st.sidebar.multiselect("BillingCycle", df["BillingCycle"].unique(), default=df["BillingCycle"].unique())
+    plan = st.sidebar.multiselect("PlanType", df["PlanType"].unique(), default=df["PlanType"].unique())
 
     df_filtered = df[
-        df["Gender"].isin(gender) &
-        df["Income"].isin(income) &
-        df["Location"].isin(location) &
-        df["BillingCycle"].isin(billing) &
-        df["PlanType"].isin(plan)
+        (df["Gender"].isin(gender)) &
+        (df["Income"].isin(income)) &
+        (df["Location"].isin(location)) &
+        (df["BillingCycle"].isin(billing)) &
+        (df["PlanType"].isin(plan))
     ]
     return df_filtered
 
-# About Page
+# About Tab
 def about_tab():
     st.title("📌 About StreamWise")
-    st.markdown("### Problem Statement:")
-    st.markdown(
-        "Many regional OTT platforms in emerging markets struggle to optimize subscriber retention, engagement, and pricing, "
-        "lacking deep analytics and data science capabilities in-house. This leads to high churn, suboptimal pricing, and poor personalization."
-    )
-
-    st.markdown("### Business Objectives:")
     st.markdown("""
-    - 🎯 Empower OTT operators with smart, low-code analytics.  
-    - 📉 Reduce churn with predictive modeling and engagement segmentation.  
-    - 🎁 Personalize offers and pricing based on behavioral analytics.  
-    - 🧠 Identify actionable user personas and business levers.  
-    - 📊 Enable data-driven, MBA-grade strategic decisions through interactive dashboards.  
+    **Problem Statement:**  
+    Many regional OTT platforms in emerging markets struggle to optimize subscriber retention, engagement, and pricing, lacking deep analytics and data science capabilities in-house.
+
+    **Business Objectives:**  
+    - Empower OTT operators with smart, low-code analytics  
+    - Reduce churn via predictive modeling  
+    - Personalize offers using behavioral segmentation  
+    - Drive strategic decisions with intuitive dashboards
     """)
 
-# Data Visualization Page
+# Data Visualization Tab
 def data_visualization_tab(df):
     st.title("📊 Data Visualization")
-    if df.empty:
-        st.info("Upload data to view dashboard insights.")
-        return
 
     col1, col2 = st.columns(2)
-
     with col1:
         st.subheader("Age Distribution")
-        fig1 = px.histogram(df, x="Age", nbins=20, color_discrete_sequence=["#FF4B4B"])
-        st.plotly_chart(fig1, use_container_width=True)
+        st.plotly_chart(px.histogram(df, x="Age", nbins=20, color_discrete_sequence=["#FF4B4B"]), use_container_width=True)
 
     with col2:
         st.subheader("App Rating Distribution")
-        fig2 = px.histogram(df, x="AppRating", nbins=10, color_discrete_sequence=["#36A2EB"])
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(px.histogram(df, x="AppRating", nbins=10, color_discrete_sequence=["#36A2EB"]), use_container_width=True)
 
     col3, col4 = st.columns(2)
-
     with col3:
         st.subheader("Tenure by Plan Type")
-        fig3 = px.box(df, x="PlanType", y="Tenure", color="PlanType")
-        st.plotly_chart(fig3, use_container_width=True)
+        st.plotly_chart(px.box(df, x="PlanType", y="SubscriptionTenureMonths", color="PlanType"), use_container_width=True)
 
     with col4:
         st.subheader("Churn Rate by Billing Cycle")
-        churn_by_billing = df.groupby("BillingCycle")["Churn"].mean().reset_index()
-        fig4 = px.bar(churn_by_billing, x="BillingCycle", y="Churn", color="BillingCycle")
-        st.plotly_chart(fig4, use_container_width=True)
+        churn_data = df.groupby("BillingCycle")["ConsideringCancellation"].apply(lambda x: (x == "Yes").mean()).reset_index(name="ChurnRate")
+        st.plotly_chart(px.bar(churn_data, x="BillingCycle", y="ChurnRate", color="BillingCycle"), use_container_width=True)
 
     st.subheader("Price Willingness vs Age")
-    fig5 = px.scatter(df, x="Age", y="WillingnessToPay", color="Gender", trendline="ols")
-    st.plotly_chart(fig5, use_container_width=True)
+    st.plotly_chart(px.scatter(df, x="Age", y="PriceWillingness", color="Gender", trendline="ols"), use_container_width=True)
 
-    st.subheader("Engagement vs Churn")
-    fig6 = px.box(df, x="Churn", y="EngagementScore", color="Churn")
-    st.plotly_chart(fig6, use_container_width=True)
+    st.subheader("Engagement (WatchTime) vs Churn")
+    st.plotly_chart(px.box(df, x="ConsideringCancellation", y="AvgWeeklyWatchTime", color="ConsideringCancellation"), use_container_width=True)
 
-    if "TopFeature" in df.columns:
+    if "ValuedFeatures" in df.columns:
         st.subheader("Top Valued Features")
-        top_feat = df["TopFeature"].value_counts().reset_index()
-        top_feat.columns = ["Feature", "Count"]
-        fig7 = px.pie(top_feat, values="Count", names="Feature", hole=0.4)
-        st.plotly_chart(fig7, use_container_width=True)
+        top_vals = df["ValuedFeatures"].value_counts().head(10).reset_index()
+        top_vals.columns = ["Feature", "Count"]
+        st.plotly_chart(px.bar(top_vals, x="Feature", y="Count", color="Feature"), use_container_width=True)
 
-    if "DeviceUsed" in df.columns:
+    if "ViewingDevices" in df.columns:
         st.subheader("Preferred Devices")
-        device_data = df["DeviceUsed"].value_counts().reset_index()
-        device_data.columns = ["Device", "Count"]
-        fig8 = px.bar(device_data, x="Device", y="Count", color="Device")
-        st.plotly_chart(fig8, use_container_width=True)
+        dev = df["ViewingDevices"].value_counts().reset_index()
+        dev.columns = ["Device", "Count"]
+        st.plotly_chart(px.pie(dev, names="Device", values="Count", hole=0.4), use_container_width=True)
 
-    st.subheader("Satisfaction vs Churn")
-    fig9 = px.violin(df, y="Satisfaction", x="Churn", box=True, color="Churn")
-    st.plotly_chart(fig9, use_container_width=True)
+    st.subheader("Satisfaction (App Rating) vs Churn")
+    st.plotly_chart(px.box(df, x="ConsideringCancellation", y="AppRating", color="ConsideringCancellation"), use_container_width=True)
 
     st.subheader("Churn by Location")
-    churn_by_loc = df.groupby("Location")["Churn"].mean().reset_index()
-    fig10 = px.bar(churn_by_loc, x="Location", y="Churn", color="Location")
-    st.plotly_chart(fig10, use_container_width=True)
+    churn_loc = df.groupby("Location")["ConsideringCancellation"].apply(lambda x: (x == "Yes").mean()).reset_index(name="ChurnRate")
+    st.plotly_chart(px.bar(churn_loc, x="Location", y="ChurnRate", color="Location"), use_container_width=True)
 
 # Main App
 def main():
