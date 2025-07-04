@@ -12,22 +12,17 @@ def show_intro():
         Click the **StreamWise** button to get started!
     """)
 
-    # Try loading logo
+    # ✅ Load logo image from GitHub
     try:
-        st.image("logo.png", width=150)
+        st.image("https://raw.githubusercontent.com/JigarMarvaniya/Streamwise/new-functionality/assets/streamwise_logo.png", width=150)
     except Exception:
-        st.image("https://raw.githubusercontent.com/JigarMarvaniya/Streamwise/new-functionality/assets/logo.png", width=150)
+        st.warning("Logo could not be loaded.")
 
-    # Embed audio (optional)
-    try:
-        audio_file = open("intro.mp3", 'rb')
-        st.audio(audio_file.read(), format='audio/mp3')
-    except FileNotFoundError:
-        st.warning("Intro audio file not found. Skipping audio...")
+    # 🔇 No audio here — we'll inject it after login in the dashboard
 
-    # Button to go to dashboard
+    # Dashboard access button
     if st.button("▶️ StreamWise"):
-        st.session_state["show_dashboard"] = True  # No explicit rerun
+        st.session_state["show_dashboard"] = True
 
 
 # -------------------------------
@@ -36,6 +31,19 @@ def show_intro():
 def show_dashboard():
     st.title("📊 StreamWise Dashboard")
 
+    # ✅ Inject hidden autoplay audio once
+    if "audio_played" not in st.session_state:
+        st.session_state["audio_played"] = True
+        st.markdown(
+            """
+            <audio autoplay hidden>
+                <source src="https://raw.githubusercontent.com/JigarMarvaniya/Streamwise/new-functionality/assets/streamwise_audio.mp3" type="audio/mpeg">
+            </audio>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # Dashboard Tabs
     tab1, tab2, tab3, tab4 = st.tabs(["📈 Data Visualisation", "🔍 Classification", "📦 Clustering", "📁 Upload/Download"])
 
     with tab1:
@@ -65,6 +73,7 @@ def show_dashboard():
 def main():
     st.set_page_config(page_title="StreamWise", layout="wide")
 
+    # Optional: dark theme styling
     st.markdown("""
         <style>
         .stApp { background-color: #111; color: white; }
@@ -72,7 +81,6 @@ def main():
         </style>
     """, unsafe_allow_html=True)
 
-    # Session-based routing
     if "show_dashboard" not in st.session_state:
         show_intro()
     else:
