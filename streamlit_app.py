@@ -1,64 +1,58 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import os
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# -------------------- PAGE CONFIG --------------------
 st.set_page_config(page_title="StreamWise", layout="wide")
 
-# -------------------- SIDEBAR --------------------
-st.sidebar.title("📂 Upload your StreamWise Survey CSV")
+# Load Data
+@st.cache_data
+def load_data():
+    try:
+        df = pd.read_csv("streamwise_survey_synthetic.csv")
+        return df
+    except Exception as e:
+        st.error(f"Failed to load dataset: {e}")
+        return pd.DataFrame()
 
-# Upload CSV
-uploaded_file = st.sidebar.file_uploader("Upload CSV", type=["csv"])
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-else:
-    default_path = "streamwise_survey_synthetic.csv"
-    if os.path.exists(default_path):
-        df = pd.read_csv(default_path)
-    else:
-        st.error("❌ No data file found. Please upload a CSV.")
-        st.stop()
+df = load_data()
 
-# -------------------- FILTERS --------------------
-st.sidebar.markdown("### 🎛️ Filter Data")
+# Sidebar Filters
+def show_sidebar_filters(df):
+    st.sidebar.title("📂 Filter Data")
 
-def multi_filter(col):
-    options = df[col].dropna().unique().tolist()
-    selected = st.sidebar.multiselect(f"{col}", options, default=options)
-    return df[df[col].isin(selected)]
+    gender = st.sidebar.multiselect("Gender", df["Gender"].unique(), default=df["Gender"].unique())
+    income = st.sidebar.multiselect("Income", df["Income"].unique(), default=df["Income"].unique())
+    location = st.sidebar.multiselect("Location", df["Location"].unique(), default=df["Location"].unique())
+    billing = st.sidebar.multiselect("BillingCycle", df["BillingCycle"].unique(), default=df["BillingCycle"].unique())
+    plan = st.sidebar.multiselect("PlanType", df["PlanType"].unique(), default=df["PlanType"].unique())
 
-filter_cols = ["Gender", "Income", "Location", "BillingCycle", "PlanType"]
-for col in filter_cols:
-    df = multi_filter(col)
+    filtered_df = df[
+        (df["Gender"].isin(gender)) &
+        (df["Income"].isin(income)) &
+        (df["Location"].isin(location)) &
+        (df["BillingCycle"].isin(billing)) &
+        (df["PlanType"].isin(plan))
+    ]
+    return filtered_df
 
-# -------------------- TABS --------------------
-tabs = st.tabs([
-    "📌 About StreamWise",
-    "📊 Data Visualization",
-    "🧠 Classification",
-    "🧬 Clustering & Persona",
-    "📈 Association Rules",
-    "🧮 Regression"
-])
-
-# -------------------- TAB 1: INTRO --------------------
-with tabs[0]:
-    st.title("About StreamWise")
-
+# Header
+def show_header():
+    st.markdown("## 📌 About StreamWise")
     if os.path.exists("streamwise_logo.png"):
-        st.image("streamwise_logo.png", width=200)
+        st.image("streamwise_logo.png", width=180)
+    else:
+        st.warning("Logo file not found. Skipping image...")
 
-    st.markdown("### **Problem Statement:**")
-    st.write(
-        "Many regional OTT platforms in emerging markets struggle to optimize subscriber retention, "
-        "engagement, and pricing, lacking deep analytics and data science capabilities in-house. "
-        "This leads to high churn, suboptimal pricing, and poor personalization."
-    )
-
-    st.markdown("### **Business Objectives:**")
+# Intro Content
+def show_about():
+    st.markdown("### About StreamWise")
     st.markdown("""
+    **Problem Statement:**  
+    Many regional OTT platforms in emerging markets struggle to optimize subscriber retention, engagement, and pricing, lacking deep analytics and data science capabilities in-house. This leads to high churn, suboptimal pricing, and poor personalization.
+
+    **Business Objectives:**
     - Empower OTT operators with smart, low-code analytics.
     - Reduce churn with predictive modeling and engagement segmentation.
     - Personalize offers and pricing based on behavioral analytics.
@@ -66,29 +60,55 @@ with tabs[0]:
     - Enable data-driven, MBA-grade strategic decisions through powerful, interactive dashboards.
     """)
 
-# -------------------- TAB 2: DATA VISUALIZATION --------------------
-with tabs[1]:
-    st.subheader("📊 Satisfaction vs Churn")
-    if "AppRating" in df.columns and "ConsideringCancellation" in df.columns:
-        fig, ax = plt.subplots()
-        df.boxplot(column="AppRating", by="ConsideringCancellation", ax=ax)
-        plt.title("App Rating by Cancellation Intent")
-        plt.suptitle("")
-        plt.xlabel("Considering Cancellation")
-        plt.ylabel("App Rating")
+# Data Visualization Tab
+def data_visualization_tab(df):
+    st.markdown("## 📊 Data Visualization")
+    try:
+        fig, ax = plt.subplots(figsize=(8,5))
+        sns.boxplot(data=df, x="ConsideringCancellation", y="AppRating", palette="coolwarm", ax=ax)
+        ax.set_title("Satisfaction vs Churn")
+        ax.set_xlabel("Considering Cancellation?")
+        ax.set_ylabel("App Rating")
         st.pyplot(fig)
-    else:
-        st.warning("Columns `AppRating` or `ConsideringCancellation` missing from dataset.")
+    except Exception as e:
+        st.error(f"Error rendering chart: {e}")
 
-# -------------------- PLACEHOLDER TABS --------------------
-with tabs[2]:
-    st.info("Coming soon: Classification module.")
+# App Runner
+def main():
+    st.markdown("# 🎬 Welcome to StreamWise")
+    st.markdown("""
+    Your all-in-one, MBA-level OTT analytics and churn prediction dashboard.  
+    _Analyze. Segment. Act._ – in true Netflix style.
+    """)
+    
+    tabs = st.tabs([
+        "📌 About StreamWise", 
+        "📊 Data Visualization", 
+        "🧠 Classification", 
+        "🧬 Clustering & Persona", 
+        "📈 Association Rules", 
+        "🧮 Regression"
+    ])
 
-with tabs[3]:
-    st.info("Coming soon: Clustering & Persona module.")
+    with tabs[0]:
+        show_header()
+        show_about()
 
-with tabs[4]:
-    st.info("Coming soon: Association Rules module.")
+    with tabs[1]:
+        filtered_df = show_sidebar_filters(df)
+        data_visualization_tab(filtered_df)
 
-with tabs[5]:
-    st.info("Coming soon: Regression module.")
+    with tabs[2]:
+        st.info("Coming soon: Classification module...")
+
+    with tabs[3]:
+        st.info("Coming soon: Clustering & Persona module...")
+
+    with tabs[4]:
+        st.info("Coming soon: Association Rules module...")
+
+    with tabs[5]:
+        st.info("Coming soon: Regression module...")
+
+if __name__ == "__main__":
+    main()
