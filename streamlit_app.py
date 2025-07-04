@@ -103,6 +103,7 @@ def show_intro():
     st.markdown("<div style='margin-top:60px;color:#aaa;font-size:0.97rem;text-align:center;'>Inspired by Netflix • Powered by Streamlit</div>", unsafe_allow_html=True)
     st.stop()
 
+
 if "show_intro" not in st.session_state:
     st.session_state.show_intro = True
 
