@@ -1,174 +1,133 @@
-# Minor trigger update to force Streamlit redeploy
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# -------------------------------
-# Load Data from CSV
-# -------------------------------
+st.set_page_config(layout="wide", page_title="StreamWise OTT Dashboard", page_icon="📊")
+
 @st.cache_data
 def load_data():
     try:
-        # Load uploaded CSV or default GitHub CSV
-        if "uploaded_csv" in st.session_state:
-            df = pd.read_csv(st.session_state["uploaded_csv"])
-        else:
-            df = pd.read_csv("streamwise_survey_synthetic.csv")
-        return df
+        return pd.read_csv("streamwise_survey_synthetic.csv")
     except Exception as e:
-        st.error(f"Error loading data: {e}")
+        st.error("CSV file not found. Please upload it in the sidebar.")
         return pd.DataFrame()
 
-
-# -------------------------------
-# Sidebar Upload + Filters
-# -------------------------------
-def sidebar_controls():
-    st.sidebar.markdown("### 📥 Upload Your StreamWise CSV")
-    uploaded = st.sidebar.file_uploader("Upload streamwise_survey_synthetic.csv", type=["csv"])
+# Sidebar
+with st.sidebar:
+    st.markdown("## 📥 Upload your StreamWise Survey CSV")
+    uploaded = st.file_uploader("Upload CSV", type="csv")
     if uploaded:
-        st.session_state["uploaded_csv"] = uploaded
+        df = pd.read_csv(uploaded)
+    else:
+        df = load_data()
 
-    with st.sidebar.expander("🎯 Filter Data", expanded=True):
-        st.multiselect("Gender", ["Male", "Female", "Other", "Prefer not to say"], key="gender_filter")
-        st.multiselect("Income", ["<20K", "20K–40K", "40K–60K", "60K–100K", ">100K"], key="income_filter")
-        st.multiselect("Location", ["Rural", "Urban", "Semi-Urban"], key="location_filter")
-        st.multiselect("Billing Cycle", ["Monthly", "Quarterly", "Yearly"], key="billing_filter")
-        st.multiselect("Plan Type", ["Basic", "Standard", "Premium", "Family"], key="plan_filter")
+    if not df.empty:
+        st.markdown("---")
+        st.markdown("### Filter Data")
 
+        # Sidebar filters
+        gender_filter = st.multiselect("Gender", df["Gender"].unique(), default=list(df["Gender"].unique()))
+        income_filter = st.multiselect("Income", df["Income"].unique(), default=list(df["Income"].unique()))
+        location_filter = st.multiselect("Location", df["Location"].unique(), default=list(df["Location"].unique()))
+        billing_filter = st.multiselect("BillingCycle", df["BillingCycle"].unique(), default=list(df["BillingCycle"].unique()))
+        plan_filter = st.multiselect("PlanType", df["PlanType"].unique(), default=list(df["PlanType"].unique()))
 
-# -------------------------------
-# About Tab
-# -------------------------------
-def about_page():
-    st.image("https://raw.githubusercontent.com/JigarMarvaniya/Streamwise/new-functionality/assets/streamwise_logo.png", width=200)
-    st.markdown("---")
-    st.markdown("## 🧾 About StreamWise")
+        df = df[
+            (df["Gender"].isin(gender_filter)) &
+            (df["Income"].isin(income_filter)) &
+            (df["Location"].isin(location_filter)) &
+            (df["BillingCycle"].isin(billing_filter)) &
+            (df["PlanType"].isin(plan_filter))
+        ]
 
-    st.markdown("### 🎯 **Problem Statement:**")
+# Tabs
+tabs = st.tabs([
+    "📌 About StreamWise",
+    "📊 Data Visualization",
+    "🧠 Classification",
+    "🧬 Clustering & Persona",
+    "📈 Association Rules",
+    "🧮 Regression"
+])
+
+# Tab 1: About StreamWise
+with tabs[0]:
+    st.image("streamwise_logo.png", width=200)
+    st.markdown("## About StreamWise")
     st.markdown("""
-    Many regional OTT platforms in emerging markets struggle to optimize subscriber retention, engagement, and pricing, 
-    lacking deep analytics and data science capabilities in-house. This leads to high churn, suboptimal pricing, and poor personalization.
+    **Problem Statement:**  
+    Many regional OTT platforms in emerging markets struggle to optimize subscriber retention, engagement, and pricing, lacking deep analytics and data science capabilities in-house.  
+    This leads to high churn, suboptimal pricing, and poor personalization.
+
+    **Business Objectives:**
+    - Empower OTT operators with smart, low-code analytics.
+    - Reduce churn with predictive modeling and engagement segmentation.
+    - Personalize offers and pricing based on behavioral analytics.
+    - Identify actionable user personas and business levers.
+    - Enable data-driven, MBA-grade strategic decisions through powerful, interactive dashboards.
     """)
 
-    st.markdown("### 📌 **Business Objectives:**")
-    st.markdown("""
-    - Empower OTT operators with smart, low-code analytics.  
-    - Reduce churn with predictive modeling and engagement segmentation.  
-    - Personalize offers and pricing based on behavioral analytics.  
-    - Identify actionable user personas and business levers.  
-    - Enable data-driven, MBA-grade strategic decisions through powerful, interactive dashboards.  
-    """)
-
-
-# -------------------------------
-# Data Visualization Tab
-# -------------------------------
-def data_visualization_tab():
-    st.markdown("## 📊 Data-Driven Business Insights")
-    df = load_data()
+# Tab 2: Data Visualization
+with tabs[1]:
     if df.empty:
-        st.warning("No data loaded. Please upload streamwise_survey_synthetic.csv.")
-        return
+        st.warning("Please upload a valid CSV file with data.")
+    else:
+        st.markdown("## 📊 Dashboard Visualizations")
 
-    # KPIs
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Total Users", f"{len(df):,}")
-    col2.metric("Churn Rate (%)", f"{(df['ConsideringCancellation'] == 'Yes').mean() * 100:.1f}%")
-    col3.metric("Avg Weekly Watch", f"{df['AvgWeeklyWatchTime'].mean():.1f} hrs")
-    col4.metric("Avg App Rating", f"{df['AppRating'].mean():.2f}")
+        kpi1, kpi2, kpi3 = st.columns(3)
+        kpi1.metric("Total Users", len(df))
+        kpi2.metric("Churned Users", df[df['Churn'] == 1].shape[0])
+        kpi3.metric("Avg Tenure", round(df['Tenure'].mean(), 1))
 
-    # Visuals
-    st.subheader("Churn Rate by Billing Cycle")
-    churn_billing = df.groupby("BillingCycle")["ConsideringCancellation"].apply(lambda x: (x == "Yes").mean()).reset_index()
-    fig1 = px.bar(churn_billing, x="BillingCycle", y="ConsideringCancellation", color="BillingCycle")
-    st.plotly_chart(fig1, use_container_width=True)
+        st.markdown("---")
 
-    st.subheader("Price Willingness vs Age")
-    fig2 = px.scatter(df, x="Age", y="PriceWillingness", color="ConsideringCancellation", opacity=0.5)
-    st.plotly_chart(fig2, use_container_width=True)
+        # Churn by BillingCycle
+        fig1 = px.histogram(df, x="BillingCycle", color="Churn", barmode="group", title="Churn by Billing Cycle")
+        st.plotly_chart(fig1, use_container_width=True)
 
-    st.subheader("Engagement vs Churn")
-    fig3 = px.bar(df, x="ConsideringCancellation", y="AvgWeeklyWatchTime", color="ConsideringCancellation")
-    st.plotly_chart(fig3, use_container_width=True)
+        # Price willingness by Age
+        fig2 = px.box(df, x="PriceWillingness", y="Age", color="Churn", title="Price Willingness vs Age")
+        st.plotly_chart(fig2, use_container_width=True)
 
-    st.subheader("App Rating Distribution")
-    fig4 = px.histogram(df, x="AppRating", color_discrete_sequence=["red"])
-    st.plotly_chart(fig4, use_container_width=True)
+        # Engagement vs Churn
+        fig3 = px.scatter(df, x="EngagementScore", y="Churn", color="PlanType", title="Engagement vs Churn")
+        st.plotly_chart(fig3, use_container_width=True)
 
-    st.subheader("Tenure by Plan Type")
-    fig5 = px.box(df, x="PlanType", y="SubscriptionTenureMonths", color="PlanType")
-    st.plotly_chart(fig5, use_container_width=True)
+        # App Rating Distribution
+        fig4 = px.histogram(df, x="AppRating", nbins=10, title="App Rating Distribution")
+        st.plotly_chart(fig4, use_container_width=True)
 
-    st.subheader("Age Distribution")
-    fig6 = px.histogram(df, x="Age", color_discrete_sequence=["red"])
-    st.plotly_chart(fig6, use_container_width=True)
+        # Tenure by PlanType
+        fig5 = px.box(df, x="PlanType", y="Tenure", title="Tenure by Plan Type")
+        st.plotly_chart(fig5, use_container_width=True)
 
-    st.subheader("Churn by Location")
-    churn_loc = df.groupby("Location")["ConsideringCancellation"].apply(lambda x: (x == "Yes").mean()).reset_index()
-    fig7 = px.bar(churn_loc, x="Location", y="ConsideringCancellation", color="Location")
-    st.plotly_chart(fig7, use_container_width=True)
+        # Churn by Location
+        fig6 = px.bar(df.groupby("Location")["Churn"].mean().reset_index(), x="Location", y="Churn", title="Churn Rate by Location")
+        st.plotly_chart(fig6, use_container_width=True)
 
-    st.subheader("Top Valued Features")
-    top_feat = df['TopFeatures'].value_counts().reset_index()
-    top_feat.columns = ['Feature', 'Count']
-    fig8 = px.bar(top_feat, x="Feature", y="Count", color="Count", color_continuous_scale="Reds")
-    st.plotly_chart(fig8, use_container_width=True)
+        # Satisfaction vs Churn (real chart)
+        fig7 = px.box(df, x="Churn", y="Satisfaction", color="Churn", title="Satisfaction vs Churn")
+        st.plotly_chart(fig7, use_container_width=True)
 
-    st.subheader("Preferred Viewing Devices")
-    dev = df['PreferredDevice'].value_counts().reset_index()
-    dev.columns = ['Device', 'Count']
-    fig9 = px.bar(dev, x="Device", y="Count", color="Count", color_continuous_scale="Reds")
-    st.plotly_chart(fig9, use_container_width=True)
+        # Top Features (only if exists)
+        if "TopFeatures" in df.columns:
+            top_feat = df['TopFeatures'].value_counts().reset_index()
+            top_feat.columns = ["Feature", "Count"]
+            fig8 = px.bar(top_feat, x="Feature", y="Count", title="Top Valued Features")
+            st.plotly_chart(fig8, use_container_width=True)
+        else:
+            st.info("🛑 'TopFeatures' column not found in your dataset. Skipping feature preference chart.")
 
-    st.subheader("Satisfaction vs Churn")
-    fig10 = px.box(df, x="ConsideringCancellation", y="SatisfactionScore", color="ConsideringCancellation")
-    st.plotly_chart(fig10, use_container_width=True)
+        # Device preference
+        if "Device" in df.columns:
+            fig9 = px.pie(df, names="Device", title="Preferred Devices")
+            st.plotly_chart(fig9, use_container_width=True)
 
+        # Age distribution
+        fig10 = px.histogram(df, x="Age", nbins=20, title="Age Distribution")
+        st.plotly_chart(fig10, use_container_width=True)
 
-# -------------------------------
-# Main App
-# -------------------------------
-def main():
-    st.set_page_config(page_title="StreamWise", layout="wide")
-
-    # Theme
-    st.markdown("""
-        <style>
-        .stApp { background-color: #111; color: white; }
-        .css-10trblm { color: #ff4b4b; }
-        .block-container { padding-top: 2rem; }
-        .stTabs [data-baseweb="tab-list"] button {
-            color: white;
-            background-color: #1c1c1c;
-            border: none;
-        }
-        .stTabs [aria-selected="true"] {
-            border-bottom: 3px solid red;
-            color: red;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
-    sidebar_controls()
-
-    tabs = st.tabs([
-        "📌 About StreamWise",
-        "📊 Data Visualization",
-        "🧠 Classification",
-        "🧬 Clustering & Persona",
-        "📈 Association Rules",
-        "🧮 Regression"
-    ])
-
-    with tabs[0]: about_page()
-    with tabs[1]: data_visualization_tab()
-    with tabs[2]: st.info("Coming soon: Classification models.")
-    with tabs[3]: st.info("Coming soon: Clustering and persona segments.")
-    with tabs[4]: st.info("Coming soon: Association rule mining.")
-    with tabs[5]: st.info("Coming soon: Regression-based predictions.")
-
-
-if __name__ == "__main__":
-    main()
+# Placeholder tabs
+for i in range(2, len(tabs)):
+    with tabs[i]:
+        st.markdown("### 🚧 Coming soon: This module will be live shortly.")
