@@ -4,7 +4,6 @@ import streamlit as st
 # Main Intro Function
 # -------------------------------
 def show_intro():
-    st.image("logo.png", width=150)
     st.markdown("## Welcome to **StreamWise**")
     st.markdown("""
         Your all-in-one, MBA-level OTT analytics and churn prediction dashboard.  
@@ -13,12 +12,18 @@ def show_intro():
         Click the **StreamWise** button to get started!
     """)
 
-    # Embed audio (intro.mp3 must be in same directory)
+    # Try loading logo (local file first, then fallback URL)
+    try:
+        st.image("logo.png", width=150)
+    except Exception:
+        st.image("https://raw.githubusercontent.com/JigarMarvaniya/Streamwise/new-functionality/assets/logo.png", width=150)
+
+    # Embed audio (intro.mp3 must be in same directory or skipped)
     try:
         audio_file = open("intro.mp3", 'rb')
         st.audio(audio_file.read(), format='audio/mp3')
     except FileNotFoundError:
-        st.warning("Intro audio file not found. Please upload `intro.mp3`.")
+        st.warning("Intro audio file not found. Skipping audio...")
 
     # Navigation button to main dashboard
     if st.button("▶️ StreamWise"):
@@ -54,7 +59,7 @@ def show_dashboard():
         uploaded_file = st.file_uploader("Upload data to predict churn", type=["csv"])
         if uploaded_file:
             st.success("File uploaded. Pass to your model for inference.")
-            # Placeholder: Add your prediction logic
+            # Placeholder: Add your prediction logic here
 
 
 # -------------------------------
@@ -62,8 +67,8 @@ def show_dashboard():
 # -------------------------------
 def main():
     st.set_page_config(page_title="StreamWise", layout="wide")
-    
-    # Set Streamlit theme colors if needed (can also be in `.streamlit/config.toml`)
+
+    # Optional styling
     st.markdown("""
         <style>
         .stApp { background-color: #111; color: white; }
