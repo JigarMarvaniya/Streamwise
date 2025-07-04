@@ -1,90 +1,116 @@
 import streamlit as st
 
 # -------------------------------
-# Main Intro Function
+# Sidebar Upload + Filters
 # -------------------------------
-def show_intro():
-    st.markdown("## Welcome to **StreamWise**")
+def sidebar_controls():
+    st.sidebar.markdown("### 📥 Upload your StreamWise Survey CSV")
+    st.sidebar.file_uploader("Drag and drop file here", type=["csv"], help="Limit 200MB per file • CSV only")
+
+    with st.sidebar.expander("🎯 Filter Data", expanded=True):
+        # Gender
+        st.markdown("**Gender**")
+        st.multiselect(" ", ["Male", "Female", "Other", "Prefer not to say"],
+                       default=["Male", "Female", "Other", "Prefer not to say"], key="gender_filter")
+
+        # Income
+        st.markdown("**Income**")
+        st.multiselect("  ", ["<20K", "20K–40K", "40K–60K", "60K–100K", ">100K"],
+                       default=["<20K", "20K–40K", "40K–60K", "60K–100K", ">100K"], key="income_filter")
+
+        # Location
+        st.markdown("**Location**")
+        st.multiselect("   ", ["Dubai", "Abu Dhabi", "Sharjah", "Others"],
+                       default=["Dubai", "Abu Dhabi", "Sharjah", "Others"], key="location_filter")
+
+        # Billing Cycle
+        st.markdown("**Billing Cycle**")
+        st.multiselect("    ", ["Monthly", "Quarterly", "Annually"],
+                       default=["Monthly", "Quarterly", "Annually"], key="billing_filter")
+
+        # Plan Type
+        st.markdown("**Plan Type**")
+        st.multiselect("     ", ["Basic", "Standard", "Premium"],
+                       default=["Basic", "Standard", "Premium"], key="plan_filter")
+
+
+# -------------------------------
+# About Tab Content
+# -------------------------------
+def about_page():
+    st.image("https://raw.githubusercontent.com/JigarMarvaniya/Streamwise/new-functionality/assets/streamwise_logo.png", width=200)
+    st.markdown("---")
+    st.markdown("## 🧾 About StreamWise")
+
+    st.markdown("### 🎯 **Problem Statement:**")
     st.markdown("""
-        Your all-in-one, MBA-level OTT analytics and churn prediction dashboard.  
-        _Analyze. Segment. Act._ – in true Netflix style.  
-        
-        Click the **StreamWise** button to get started!
+    Many regional OTT platforms in emerging markets struggle to optimize subscriber retention, engagement, and pricing, 
+    lacking deep analytics and data science capabilities in-house. This leads to high churn, suboptimal pricing, and poor personalization.
     """)
 
-    # ✅ Load logo image from GitHub
-    try:
-        st.image("https://raw.githubusercontent.com/JigarMarvaniya/Streamwise/new-functionality/assets/streamwise_logo.png", width=150)
-    except Exception:
-        st.warning("Logo could not be loaded.")
-
-    # 🔇 No audio here — we'll inject it after login in the dashboard
-
-    # Dashboard access button
-    if st.button("▶️ StreamWise"):
-        st.session_state["show_dashboard"] = True
+    st.markdown("### 📌 **Business Objectives:**")
+    st.markdown("""
+    - Empower OTT operators with smart, low-code analytics.  
+    - Reduce churn with predictive modeling and engagement segmentation.  
+    - Personalize offers and pricing based on behavioral analytics.  
+    - Identify actionable user personas and business levers.  
+    - Enable data-driven, MBA-grade strategic decisions through powerful, interactive dashboards.  
+    """)
 
 
 # -------------------------------
-# Main Dashboard Function
-# -------------------------------
-def show_dashboard():
-    st.title("📊 StreamWise Dashboard")
-
-    # ✅ Inject hidden autoplay audio once
-    if "audio_played" not in st.session_state:
-        st.session_state["audio_played"] = True
-        st.markdown(
-            """
-            <audio autoplay hidden>
-                <source src="https://raw.githubusercontent.com/JigarMarvaniya/Streamwise/new-functionality/assets/streamwise_audio.mp3" type="audio/mpeg">
-            </audio>
-            """,
-            unsafe_allow_html=True
-        )
-
-    # Dashboard Tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["📈 Data Visualisation", "🔍 Classification", "📦 Clustering", "📁 Upload/Download"])
-
-    with tab1:
-        st.header("Data Visualisation")
-        st.markdown("Explore descriptive analytics here.")
-        st.info("Charts and insights coming soon...")
-
-    with tab2:
-        st.header("Classification Models")
-        st.markdown("Apply ML models like KNN, DT, RF, GBRT.")
-        st.warning("Model section under development.")
-
-    with tab3:
-        st.header("Clustering")
-        st.markdown("Explore user clusters using K-Means.")
-
-    with tab4:
-        st.header("Upload / Predict New Data")
-        uploaded_file = st.file_uploader("Upload data to predict churn", type=["csv"])
-        if uploaded_file:
-            st.success("File uploaded. Add model prediction logic here.")
-
-
-# -------------------------------
-# Main App Entry
+# Main App Layout
 # -------------------------------
 def main():
     st.set_page_config(page_title="StreamWise", layout="wide")
 
-    # Optional: dark theme styling
+    # Custom CSS for styling
     st.markdown("""
         <style>
-        .stApp { background-color: #111; color: white; }
-        .css-10trblm { color: #ff4b4b; }
+            .stApp { background-color: #111; color: white; }
+            .css-10trblm { color: #ff4b4b; }
+            .block-container { padding-top: 2rem; }
+            .stTabs [data-baseweb="tab-list"] button {
+                color: white;
+                background-color: #1c1c1c;
+                border: none;
+            }
+            .stTabs [aria-selected="true"] {
+                border-bottom: 3px solid red;
+                color: red;
+            }
         </style>
     """, unsafe_allow_html=True)
 
-    if "show_dashboard" not in st.session_state:
-        show_intro()
-    else:
-        show_dashboard()
+    sidebar_controls()
+
+    # Navigation tabs
+    tab = st.tabs([
+        "📌 About StreamWise",
+        "📊 Data Visualization",
+        "🧠 Classification",
+        "🧬 Clustering & Persona",
+        "📈 Association Rules",
+        "🧮 Regression"
+    ])
+
+    with tab[0]:
+        about_page()
+
+    with tab[1]:
+        st.info("Coming soon: Dashboard visualizations.")
+
+    with tab[2]:
+        st.info("Coming soon: Classification models.")
+
+    with tab[3]:
+        st.info("Coming soon: Clustering and persona segments.")
+
+    with tab[4]:
+        st.info("Coming soon: Market basket association rules.")
+
+    with tab[5]:
+        st.info("Coming soon: Regression-based predictions.")
 
 
 if __name__ == "__main__":
